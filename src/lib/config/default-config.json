@@ -1,0 +1,40 @@
+{
+    "defaults": {
+        "variant": "button",
+        "size": "md",
+        "radius": "md",
+        "multiple": false
+    },
+    "validation": {
+        "maxSize": 10485760,
+        "maxFiles": 5,
+        "allowedTypes": [
+            "*"
+        ]
+    },
+    "styling": {
+        "theme": "auto",
+        "colors": {
+            "primary": "#3b82f6",
+            "secondary": "#6b7280",
+            "success": "#10b981",
+            "error": "#ef4444"
+        },
+        "spacing": {
+            "padding": "1rem",
+            "margin": "0.5rem"
+        }
+    },
+    "labels": {
+        "uploadText": "Choose files to upload",
+        "dragText": "Drag and drop files here",
+        "errorText": "Upload failed",
+        "successText": "Upload successful"
+    },
+    "features": {
+        "dragAndDrop": true,
+        "preview": true,
+        "progress": true,
+        "multipleFiles": false
+    }
+}

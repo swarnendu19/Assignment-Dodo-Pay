@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+/* File Upload Component Library Styles */
+@layer components {
+    .file-upload {
+        @apply relative inline-block;
+    }
+
+    .file-upload--sm {
+        @apply text-sm;
+    }
+
+    .file-upload--md {
+        @apply text-base;
+    }
+
+    .file-upload--lg {
+        @apply text-lg;
+    }
+
+    .file-upload--button {
+        @apply cursor-pointer;
+    }
+
+    .file-upload--dropzone {
+        @apply border-2 border-dashed border-gray-300 rounded-lg p-6;
+    }
+}
