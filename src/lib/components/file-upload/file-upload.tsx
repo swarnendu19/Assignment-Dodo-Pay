@@ -1,34 +1,167 @@
-import React from 'react'
-import type { FileUploadProps } from './file-upload.types'
+import React, { useMemo } from 'react'
+import type { FileUploadProps, FileUploadConfig } from './file-upload.types'
+import { FileUploadProvider } from './file-upload-context'
+import { defaultConfig, mergeConfig, loadConfigFromJSON } from '../../config/schema'
+
+// Import variant components
+import { ButtonUpload } from './variants/button-upload'
+import { DropzoneUpload } from './variants/dropzone-upload'
+import { PreviewUpload } from './variants/preview-upload'
+import { ImageUpload } from './variants/image-upload'
+import { MultiFileUpload } from './variants/multi-file-upload'
 
 export const FileUpload: React.FC<FileUploadProps> = ({
-    variant = 'button',
-    size = 'md',
-    radius = 'md',
-    disabled = false,
-    multiple = false,
+    variant,
+    size,
+    radius,
+    theme,
+    disabled,
+    multiple,
     accept,
     maxSize,
     maxFiles,
     onUpload,
     onError,
-    config,
+    onProgress,
+    onFileSelect,
+    onFileRemove,
+    onDragEnter,
+    onDragLeave,
+    onDragOver,
+    onDrop,
+    config: configProp,
     className,
+    style,
+    ariaLabel,
+    ariaDescribedBy,
     children,
     ...props
 }) => {
-    // Placeholder implementation - will be expanded in later tasks
+    // Merge configuration: default < config file/object < props
+    const mergedConfig = useMemo((): FileUploadConfig => {
+        let baseConfig = defaultConfig
+
+        // If config is provided as a string (JSON path) or object
+        if (configProp) {
+            if (typeof configProp === 'string') {
+                // Try to load from JSON string (could be file path or JSON content)
+                try {
+                    const { config: loadedConfig } = loadConfigFromJSON(configProp)
+                    if (loadedConfig) {
+                        baseConfig = loadedConfig
+                    }
+                } catch (error) {
+                    console.warn('Failed to load config from string:', error)
+                }
+            } else {
+                // Merge with provided config object
+                baseConfig = mergeConfig(configProp)
+            }
+        }
+
+        // Override with explicit props (props take highest priority)
+        const propOverrides: Partial<FileUploadConfig> = {}
+
+        if (variant !== undefined) {
+            propOverrides.defaults = { ...propOverrides.defaults, variant }
+        }
+        if (size !== undefined) {
+            propOverrides.defaults = { ...propOverrides.defaults, size }
+        }
+        if (radius !== undefined) {
+            propOverrides.defaults = { ...propOverrides.defaults, radius }
+        }
+        if (theme !== undefined) {
+            propOverrides.defaults = { ...propOverrides.defaults, theme }
+            propOverrides.styling = { ...propOverrides.styling, theme }
+        }
+        if (disabled !== undefined) {
+            propOverrides.defaults = { ...propOverrides.defaults, disabled }
+        }
+        if (multiple !== undefined) {
+            propOverrides.defaults = { ...propOverrides.defaults, multiple }
+            propOverrides.features = { ...propOverrides.features, multipleFiles: multiple }
+        }
+        if (accept !== undefined) {
+            propOverrides.defaults = { ...propOverrides.defaults, accept }
+        }
+        if (maxSize !== undefined) {
+            propOverrides.defaults = { ...propOverrides.defaults, maxSize }
+            propOverrides.validation = { ...propOverrides.validation, maxSize }
+        }
+        if (maxFiles !== undefined) {
+            propOverrides.defaults = { ...propOverrides.defaults, maxFiles }
+            propOverrides.validation = { ...propOverrides.validation, maxFiles }
+        }
+
+        return Object.keys(propOverrides).length > 0
+            ? mergeConfig({ ...baseConfig, ...propOverrides })
+            : baseConfig
+    }, [configProp, variant, size, radius, theme, disabled, multiple, accept, maxSize, maxFiles])
+
+    // Create event handlers object
+    const eventHandlers = useMemo(() => ({
+        onFileSelect: onFileSelect ? (event: any) => onFileSelect(event.files.map((f: any) => f.file)) : undefined,
+        onUploadStart: onUpload ? (event: any) => onUpload(event.files.map((f: any) => f.file)) : undefined,
+        onUploadProgress: onProgress ? (event: any) => {
+            const file = event.files[0]
+            if (file) {
+                onProgress(file.progress, file)
+            }
+        } : undefined,
+        onUploadSuccess: undefined, // Will be handled internally
+        onUploadError: onError ? (event: any) => {
+            const file = event.files[0]
+            if (file?.error) {
+                onError(file.error)
+            }
+        } : undefined,
+        onFileRemove: onFileRemove ? (event: any) => {
+            const file = event.files[0]
+            if (file) {
+                onFileRemove(file.id)
+            }
+        } : undefined,
+        onUploadRetry: undefined // Will be handled internally
+    }), [onUpload, onError, onProgress, onFileSelect, onFileRemove])
+
+    // Get the effective variant from merged config
+    const effectiveVariant = mergedConfig.defaults.variant
+
+    // Render the appropriate variant component
+    const renderVariant = () => {
+        const commonProps = {
+            className,
+            style,
+            ariaLabel,
+            ariaDescribedBy,
+            onDragEnter,
+            onDragLeave,
+            onDragOver,
+            onDrop,
+            children,
+            ...props
+        }
+
+        switch (effectiveVariant) {
+            case 'dropzone':
+                return <DropzoneUpload {...commonProps} />
+            case 'preview':
+                return <PreviewUpload {...commonProps} />
+            case 'image-only':
+                return <ImageUpload {...commonProps} />
+            case 'multi-file':
+                return <MultiFileUpload {...commonProps} />
+            case 'button':
+            default:
+                return <ButtonUpload {...commonProps} />
+        }
+    }
+
     return (
-        <div className={`file-upload file-upload--${variant} file-upload--${size} ${className || ''}`}>
-            <input
-                type="file"
-                multiple={multiple}
-                accept={accept}
-                disabled={disabled}
-                {...props}
-            />
-            {children}
-        </div>
+        <FileUploadProvider config={mergedConfig} handlers={eventHandlers}>
+            {renderVariant()}
+        </FileUploadProvider>
     )
 }
 
