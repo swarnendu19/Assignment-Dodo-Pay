@@ -1,6 +1,4 @@
 import { ReactNode } from 'react'
-import { types } from 'util'
-// import { types } from 'util'
 
 export type FileUploadVariant = 'button' | 'dropzone' | 'preview' | 'image-only' | 'multi-file'
 export type FileUploadSize = 'sm' | 'md' | 'lg'
