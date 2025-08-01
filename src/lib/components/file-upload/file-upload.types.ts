@@ -338,6 +338,7 @@ export interface ButtonUploadProps extends Omit<FileUploadProps, 'variant'> {
     buttonText?: string
     icon?: ReactNode
     iconPosition?: 'left' | 'right'
+    asChild?: boolean
 }
 
 export interface DropzoneUploadProps extends Omit<FileUploadProps, 'variant'> {
