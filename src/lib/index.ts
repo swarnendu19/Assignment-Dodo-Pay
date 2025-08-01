@@ -60,3 +60,17 @@ export {
     configToCSSProperties,
     diffConfigurations
 } from './config/utils'
+
+// Upload mock utilities
+export {
+    MockUploadService,
+    mockUploadService,
+    mockUpload,
+    mockUploadMultiple,
+    createUploadFile,
+    updateUploadFileStatus
+} from './utils/upload-mock'
+
+export type {
+    MockUploadConfig
+} from './utils/upload-mock'
