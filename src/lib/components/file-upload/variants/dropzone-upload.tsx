@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+import React, { useRef, useState, useCallback, useEffect } from 'react'
 import { useFileUpload } from '../file-upload-context'
 
 interface DropzoneUploadProps {
@@ -11,6 +11,10 @@ interface DropzoneUploadProps {
     onDragOver?: (event: React.DragEvent) => void
     onDrop?: (event: React.DragEvent) => void
     children?: React.ReactNode
+    height?: string | number
+    showBorder?: boolean
+    dropzoneText?: string
+    activeDropzoneText?: string
 }
 
 export const DropzoneUpload: React.FC<DropzoneUploadProps> = ({
@@ -22,54 +26,131 @@ export const DropzoneUpload: React.FC<DropzoneUploadProps> = ({
     onDragLeave,
     onDragOver,
     onDrop,
-    children
+    children,
+    height = '200px',
+    showBorder = true,
+    dropzoneText,
+    activeDropzoneText
 }) => {
     const { config, actions, state } = useFileUpload()
     const inputRef = useRef<HTMLInputElement>(null)
+    const dropzoneRef = useRef<HTMLDivElement>(null)
     const [isDragOver, setIsDragOver] = useState(false)
+    const [dragCounter, setDragCounter] = useState(0)
+    const [isFocused, setIsFocused] = useState(false)
 
-    const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    // Handle file selection from input
+    const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(event.target.files || [])
         if (files.length > 0) {
             actions.selectFiles(files)
         }
-    }
+        // Reset input value to allow selecting the same file again
+        event.target.value = ''
+    }, [actions])
 
-    const handleClick = () => {
-        inputRef.current?.click()
-    }
-
-    const handleKeyDown = (event: React.KeyboardEvent) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault()
-            handleClick()
+    // Handle click to open file dialog
+    const handleClick = useCallback(() => {
+        if (!config.defaults.disabled && !state.isUploading) {
+            inputRef.current?.click()
         }
-    }
+    }, [config.defaults.disabled, state.isUploading])
 
-    const handleDragEnter = (event: React.DragEvent) => {
+    // Enhanced keyboard navigation
+    const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
+        if (config.defaults.disabled || state.isUploading) return
+
+        switch (event.key) {
+            case 'Enter':
+            case ' ':
+                event.preventDefault()
+                handleClick()
+                break
+            case 'Escape':
+                if (isDragOver) {
+                    event.preventDefault()
+                    setIsDragOver(false)
+                    setDragCounter(0)
+                }
+                break
+            default:
+                break
+        }
+    }, [config.defaults.disabled, state.isUploading, handleClick, isDragOver])
+
+    // Focus management
+    const handleFocus = useCallback(() => {
+        setIsFocused(true)
+    }, [])
+
+    const handleBlur = useCallback(() => {
+        setIsFocused(false)
+    }, [])
+
+    // Enhanced drag event handlers with proper counter management
+    const handleDragEnter = useCallback((event: React.DragEvent) => {
         event.preventDefault()
         event.stopPropagation()
-        setIsDragOver(true)
+
+        if (config.defaults.disabled || state.isUploading || !config.features.dragAndDrop) {
+            return
+        }
+
+        setDragCounter(prev => prev + 1)
+
+        // Only set drag over on first enter
+        if (dragCounter === 0) {
+            setIsDragOver(true)
+        }
+
         onDragEnter?.(event)
-    }
+    }, [config.defaults.disabled, state.isUploading, config.features.dragAndDrop, dragCounter, onDragEnter])
 
-    const handleDragLeave = (event: React.DragEvent) => {
+    const handleDragLeave = useCallback((event: React.DragEvent) => {
         event.preventDefault()
         event.stopPropagation()
-        setIsDragOver(false)
+
+        if (config.defaults.disabled || state.isUploading || !config.features.dragAndDrop) {
+            return
+        }
+
+        setDragCounter(prev => {
+            const newCounter = prev - 1
+            // Only remove drag over when counter reaches 0
+            if (newCounter === 0) {
+                setIsDragOver(false)
+            }
+            return newCounter
+        })
+
         onDragLeave?.(event)
-    }
+    }, [config.defaults.disabled, state.isUploading, config.features.dragAndDrop, onDragLeave])
 
-    const handleDragOver = (event: React.DragEvent) => {
+    const handleDragOver = useCallback((event: React.DragEvent) => {
         event.preventDefault()
         event.stopPropagation()
+
+        if (config.defaults.disabled || state.isUploading || !config.features.dragAndDrop) {
+            return
+        }
+
+        // Set the dropEffect to indicate what will happen on drop
+        event.dataTransfer.dropEffect = 'copy'
+
         onDragOver?.(event)
-    }
+    }, [config.defaults.disabled, state.isUploading, config.features.dragAndDrop, onDragOver])
 
-    const handleDrop = (event: React.DragEvent) => {
+    const handleDrop = useCallback((event: React.DragEvent) => {
         event.preventDefault()
         event.stopPropagation()
+
+        if (config.defaults.disabled || state.isUploading || !config.features.dragAndDrop) {
+            return
+        }
+
+        // Reset drag state
         setIsDragOver(false)
+        setDragCounter(0)
 
         const files = Array.from(event.dataTransfer.files)
         if (files.length > 0) {
@@ -77,62 +158,100 @@ export const DropzoneUpload: React.FC<DropzoneUploadProps> = ({
         }
 
         onDrop?.(event)
-    }
+    }, [config.defaults.disabled, state.isUploading, config.features.dragAndDrop, actions, onDrop])
 
+    // Reset drag state on component unmount or when disabled
+    useEffect(() => {
+        if (config.defaults.disabled || state.isUploading) {
+            setIsDragOver(false)
+            setDragCounter(0)
+        }
+    }, [config.defaults.disabled, state.isUploading])
+
+    // Determine visual state for styling
+    const isDisabled = config.defaults.disabled || state.isUploading
+    const isActive = isDragOver && !isDisabled
+    const hasFocus = isFocused && !isDisabled
+
+    // Build CSS classes
     const dropzoneClasses = [
         'file-upload-dropzone',
         `file-upload-dropzone--${config.defaults.size}`,
         `file-upload-dropzone--${config.defaults.radius}`,
-        config.defaults.disabled ? 'file-upload-dropzone--disabled' : '',
+        isDisabled ? 'file-upload-dropzone--disabled' : '',
         state.isUploading ? 'file-upload-dropzone--uploading' : '',
-        isDragOver ? 'file-upload-dropzone--drag-over' : '',
+        isActive ? 'file-upload-dropzone--drag-over' : '',
+        hasFocus ? 'file-upload-dropzone--focused' : '',
         className || ''
     ].filter(Boolean).join(' ')
 
+    // Dynamic styling based on state
+    const dropzoneStyle: React.CSSProperties = {
+        border: showBorder ? `2px ${config.styling.borders.style} ${isActive ? config.styling.colors.primary :
+                hasFocus ? config.styling.colors.primary :
+                    config.styling.colors.border
+            }` : 'none',
+        borderRadius: config.styling.spacing.borderRadius,
+        padding: '2rem',
+        textAlign: 'center' as const,
+        cursor: isDisabled ? 'not-allowed' : 'pointer',
+        backgroundColor: isActive ? `${config.styling.colors.primary}15` :
+            hasFocus ? `${config.styling.colors.primary}08` :
+                config.styling.colors.background,
+        color: config.styling.colors.foreground,
+        fontSize: config.styling.typography.fontSize,
+        transition: config.animations.enabled ?
+            `all ${config.animations.duration}ms ${config.animations.easing}` : 'none',
+        opacity: isDisabled ? 0.6 : 1,
+        minHeight: typeof height === 'number' ? `${height}px` : height,
+        height: typeof height === 'number' ? `${height}px` : height,
+        display: 'flex',
+        flexDirection: 'column' as const,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: config.styling.spacing.gap,
+        outline: hasFocus ? `2px solid ${config.styling.colors.primary}` : 'none',
+        outlineOffset: '2px',
+        boxShadow: isActive ? config.styling.shadows.md :
+            hasFocus ? config.styling.shadows.sm : 'none',
+        ...style
+    }
+
     return (
-        <div className="file-upload file-upload--dropzone" style={style}>
+        <div className="file-upload file-upload--dropzone">
             <input
                 ref={inputRef}
                 type="file"
                 multiple={config.defaults.multiple}
                 accept={config.defaults.accept}
-                disabled={config.defaults.disabled || state.isUploading}
+                disabled={isDisabled}
                 onChange={handleFileSelect}
-                className="file-upload-input"
-                style={{ display: 'none' }}
+                className="sr-only"
                 aria-hidden="true"
+                tabIndex={-1}
             />
 
             <div
+                ref={dropzoneRef}
                 className={dropzoneClasses}
                 onClick={handleClick}
                 onKeyDown={handleKeyDown}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
                 onDragEnter={config.features.dragAndDrop ? handleDragEnter : undefined}
                 onDragLeave={config.features.dragAndDrop ? handleDragLeave : undefined}
                 onDragOver={config.features.dragAndDrop ? handleDragOver : undefined}
                 onDrop={config.features.dragAndDrop ? handleDrop : undefined}
                 role="button"
-                tabIndex={config.defaults.disabled || state.isUploading ? -1 : 0}
-                aria-label={ariaLabel || (isDragOver ? config.labels.dropText : config.labels.dragText)}
+                tabIndex={isDisabled ? -1 : 0}
+                aria-label={ariaLabel || (
+                    isActive ? (activeDropzoneText || config.labels.dropText) :
+                        (dropzoneText || config.labels.dragText)
+                )}
                 aria-describedby={ariaDescribedBy}
-                style={{
-                    border: `2px dashed ${isDragOver ? config.styling.colors.primary : config.styling.colors.border}`,
-                    borderRadius: config.styling.spacing.borderRadius,
-                    padding: '2rem',
-                    textAlign: 'center',
-                    cursor: config.defaults.disabled || state.isUploading ? 'not-allowed' : 'pointer',
-                    backgroundColor: isDragOver ? `${config.styling.colors.primary}10` : config.styling.colors.background,
-                    color: config.styling.colors.foreground,
-                    fontSize: config.styling.typography.fontSize,
-                    transition: config.animations.enabled ? `all ${config.animations.duration}ms ${config.animations.easing}` : 'none',
-                    opacity: config.defaults.disabled || state.isUploading ? 0.6 : 1,
-                    minHeight: '200px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: config.styling.spacing.gap
-                }}
+                aria-disabled={isDisabled}
+                aria-pressed={state.files.length > 0}
+                style={dropzoneStyle}
             >
                 {children || (
                     <>
