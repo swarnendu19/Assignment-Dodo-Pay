@@ -1,5 +1,6 @@
-import React, { useRef } from 'react'
+import React, { useRef, useState, useCallback } from 'react'
 import { useFileUpload } from '../file-upload-context'
+import { validateImageDimensions } from '../../../utils/file-validation'
 
 interface ImageUploadProps {
     className?: string
@@ -7,6 +8,10 @@ interface ImageUploadProps {
     ariaLabel?: string
     ariaDescribedBy?: string
     children?: React.ReactNode
+    aspectRatio?: number
+    cropEnabled?: boolean
+    resizeEnabled?: boolean
+    quality?: number
 }
 
 export const ImageUpload: React.FC<ImageUploadProps> = ({
@@ -14,17 +19,67 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     style,
     ariaLabel,
     ariaDescribedBy,
-    children
+    children,
+    aspectRatio,
+    cropEnabled = false,
+    resizeEnabled = false,
+    quality = 0.8
 }) => {
     const { config, actions, state } = useFileUpload()
     const inputRef = useRef<HTMLInputElement>(null)
+    const [imageValidationErrors, setImageValidationErrors] = useState<Record<string, string[]>>({})
 
-    const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const validateImageFile = useCallback(async (file: File) => {
+        if (!file.type.startsWith('image/')) return []
+
+        const errors: string[] = []
+
+        try {
+            const validation = await validateImageDimensions(
+                file,
+                config.validation.maxWidth,
+                config.validation.maxHeight,
+                config.validation.minWidth,
+                config.validation.minHeight
+            )
+
+            if (!validation.isValid) {
+                errors.push(...validation.errors.map(e => e.message))
+            }
+        } catch (error) {
+            errors.push('Failed to validate image dimensions')
+        }
+
+        return errors
+    }, [config.validation])
+
+    const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(event.target.files || [])
         // Filter only image files
         const imageFiles = files.filter(file => file.type.startsWith('image/'))
+
         if (imageFiles.length > 0) {
-            actions.selectFiles(imageFiles)
+            // Validate each image file
+            const validationResults: Record<string, string[]> = {}
+
+            for (const file of imageFiles) {
+                const errors = await validateImageFile(file)
+                if (errors.length > 0) {
+                    validationResults[file.name] = errors
+                }
+            }
+
+            setImageValidationErrors(validationResults)
+
+            // Only select files that passed validation
+            const validFiles = imageFiles.filter(file => !validationResults[file.name])
+            if (validFiles.length > 0) {
+                // Process images if crop/resize is enabled
+                const processedFiles = await Promise.all(
+                    validFiles.map(file => processImage(file))
+                )
+                actions.selectFiles(processedFiles)
+            }
         }
     }
 
@@ -42,6 +97,121 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     const getImagePreview = (file: File): string => {
         return URL.createObjectURL(file)
     }
+
+    const resizeImage = useCallback((file: File, maxWidth: number, maxHeight: number): Promise<File> => {
+        return new Promise((resolve) => {
+            const canvas = document.createElement('canvas')
+            const ctx = canvas.getContext('2d')
+            const img = new Image()
+
+            img.onload = () => {
+                let { width, height } = img
+
+                // Calculate new dimensions while maintaining aspect ratio
+                if (width > height) {
+                    if (width > maxWidth) {
+                        height = (height * maxWidth) / width
+                        width = maxWidth
+                    }
+                } else {
+                    if (height > maxHeight) {
+                        width = (width * maxHeight) / height
+                        height = maxHeight
+                    }
+                }
+
+                canvas.width = width
+                canvas.height = height
+
+                ctx?.drawImage(img, 0, 0, width, height)
+
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        const resizedFile = new File([blob], file.name, {
+                            type: file.type,
+                            lastModified: Date.now()
+                        })
+                        resolve(resizedFile)
+                    } else {
+                        resolve(file)
+                    }
+                }, file.type, quality)
+            }
+
+            img.src = URL.createObjectURL(file)
+        })
+    }, [quality])
+
+    const cropImage = useCallback((file: File, aspectRatio: number): Promise<File> => {
+        return new Promise((resolve) => {
+            const canvas = document.createElement('canvas')
+            const ctx = canvas.getContext('2d')
+            const img = new Image()
+
+            img.onload = () => {
+                const { width, height } = img
+
+                let cropWidth = width
+                let cropHeight = height
+                let offsetX = 0
+                let offsetY = 0
+
+                // Calculate crop dimensions based on aspect ratio
+                const imageAspectRatio = width / height
+
+                if (imageAspectRatio > aspectRatio) {
+                    // Image is wider than desired aspect ratio
+                    cropWidth = height * aspectRatio
+                    offsetX = (width - cropWidth) / 2
+                } else {
+                    // Image is taller than desired aspect ratio
+                    cropHeight = width / aspectRatio
+                    offsetY = (height - cropHeight) / 2
+                }
+
+                canvas.width = cropWidth
+                canvas.height = cropHeight
+
+                ctx?.drawImage(
+                    img,
+                    offsetX, offsetY, cropWidth, cropHeight,
+                    0, 0, cropWidth, cropHeight
+                )
+
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        const croppedFile = new File([blob], file.name, {
+                            type: file.type,
+                            lastModified: Date.now()
+                        })
+                        resolve(croppedFile)
+                    } else {
+                        resolve(file)
+                    }
+                }, file.type, quality)
+            }
+
+            img.src = URL.createObjectURL(file)
+        })
+    }, [quality])
+
+    const processImage = useCallback(async (file: File): Promise<File> => {
+        let processedFile = file
+
+        // Apply cropping if enabled and aspect ratio is specified
+        if (cropEnabled && aspectRatio) {
+            processedFile = await cropImage(processedFile, aspectRatio)
+        }
+
+        // Apply resizing if enabled and dimensions are specified
+        if (resizeEnabled && (config.validation.maxWidth || config.validation.maxHeight)) {
+            const maxWidth = config.validation.maxWidth || 1920
+            const maxHeight = config.validation.maxHeight || 1080
+            processedFile = await resizeImage(processedFile, maxWidth, maxHeight)
+        }
+
+        return processedFile
+    }, [cropEnabled, resizeEnabled, aspectRatio, config.validation, cropImage, resizeImage])
 
     return (
         <div className={`file-upload file-upload--image ${className || ''}`} style={style}>
@@ -122,6 +292,48 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
                 )}
             </div>
 
+            {/* Validation Errors */}
+            {Object.keys(imageValidationErrors).length > 0 && (
+                <div className="file-upload-validation-errors" style={{
+                    marginTop: '1rem',
+                    padding: '1rem',
+                    backgroundColor: config.styling.colors.error + '10',
+                    border: `1px solid ${config.styling.colors.error}`,
+                    borderRadius: config.styling.spacing.borderRadius
+                }}>
+                    <div style={{
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        color: config.styling.colors.error,
+                        marginBottom: '0.5rem'
+                    }}>
+                        Image Validation Errors:
+                    </div>
+                    {Object.entries(imageValidationErrors).map(([fileName, errors]) => (
+                        <div key={fileName} style={{ marginBottom: '0.5rem' }}>
+                            <div style={{
+                                fontSize: '0.8rem',
+                                fontWeight: '500',
+                                color: config.styling.colors.foreground,
+                                marginBottom: '0.25rem'
+                            }}>
+                                {fileName}:
+                            </div>
+                            <ul style={{
+                                margin: 0,
+                                paddingLeft: '1rem',
+                                fontSize: '0.75rem',
+                                color: config.styling.colors.error
+                            }}>
+                                {errors.map((error, index) => (
+                                    <li key={index}>{error}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    ))}
+                </div>
+            )}
+
             {/* Image Previews */}
             {state.files.length > 0 && (
                 <div className="file-upload-image-previews" style={{
@@ -146,9 +358,12 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
                                 {/* Image Preview */}
                                 <div style={{
                                     width: '100%',
-                                    height: config.defaults.multiple ? '150px' : '200px',
+                                    height: aspectRatio
+                                        ? `${(config.defaults.multiple ? 150 : 200) / aspectRatio}px`
+                                        : config.defaults.multiple ? '150px' : '200px',
                                     position: 'relative',
-                                    overflow: 'hidden'
+                                    overflow: 'hidden',
+                                    aspectRatio: aspectRatio ? aspectRatio.toString() : undefined
                                 }}>
                                     <img
                                         src={preview}
@@ -156,7 +371,8 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
                                         style={{
                                             width: '100%',
                                             height: '100%',
-                                            objectFit: 'cover'
+                                            objectFit: cropEnabled ? 'cover' : 'contain',
+                                            backgroundColor: config.styling.colors.muted + '20'
                                         }}
                                         onLoad={() => {
                                             // Clean up object URL to prevent memory leaks
