@@ -2,6 +2,7 @@ import React, { useRef, useCallback } from 'react'
 import { Slot } from '@radix-ui/react-slot'
 import { useFileUpload } from '../file-upload-context'
 import { validateFiles } from '../../../utils/file-validation'
+import { generateThemeClasses, cn } from '../../../utils/theme'
 import type { ButtonUploadProps } from '../file-upload.types'
 
 export const ButtonUpload: React.FC<ButtonUploadProps> = ({
@@ -82,44 +83,23 @@ export const ButtonUpload: React.FC<ButtonUploadProps> = ({
         }
     }, [handleButtonClick])
 
-    // Generate TailwindCSS classes based on config
+    // Generate theme classes using the theming system
     const getButtonClasses = () => {
-        const baseClasses = [
+        const themeClasses = generateThemeClasses(
+            'button',
+            config.defaults.size,
+            config.defaults.radius,
+            config,
+            ['file-upload--primary']
+        )
+
+        const additionalClasses = [
             'inline-flex items-center justify-center gap-2',
-            'font-medium transition-colors duration-200',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
-            'disabled:pointer-events-none disabled:opacity-50'
+            disabled || state.isUploading ? 'file-upload--disabled' : '',
+            state.isUploading ? 'file-upload--loading' : ''
         ]
 
-        // Size classes
-        const sizeClasses = {
-            sm: 'h-8 px-3 text-sm',
-            md: 'h-10 px-4 text-sm',
-            lg: 'h-12 px-6 text-base'
-        }
-
-        // Radius classes
-        const radiusClasses = {
-            none: 'rounded-none',
-            sm: 'rounded-sm',
-            md: 'rounded-md',
-            lg: 'rounded-lg',
-            full: 'rounded-full'
-        }
-
-        // Color classes (using CSS custom properties for theming)
-        const colorClasses = [
-            'bg-blue-600 text-white hover:bg-blue-700',
-            'focus-visible:ring-blue-500'
-        ]
-
-        return [
-            ...baseClasses,
-            sizeClasses[config.defaults.size] || sizeClasses.md,
-            radiusClasses[config.defaults.radius] || radiusClasses.md,
-            ...colorClasses,
-            className
-        ].filter(Boolean).join(' ')
+        return cn(themeClasses, ...additionalClasses, className)
     }
 
     const renderButtonContent = () => {
@@ -208,14 +188,21 @@ export const ButtonUpload: React.FC<ButtonUploadProps> = ({
                     {state.files.map((file) => (
                         <div
                             key={file.id}
-                            className="flex items-center justify-between p-3 bg-gray-50 rounded-md border"
+                            className={cn(
+                                'flex items-center justify-between',
+                                'file-upload--sm',
+                                'file-upload--radius-md',
+                                'border border-[var(--file-upload-border)]',
+                                'bg-[var(--file-upload-background)]',
+                                'text-[var(--file-upload-foreground)]'
+                            )}
                             role="listitem"
                         >
                             <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-gray-900 truncate">
+                                <p className="font-medium truncate" style={{ fontSize: 'var(--file-upload-font-size-sm)' }}>
                                     {file.name}
                                 </p>
-                                <p className="text-xs text-gray-500">
+                                <p className="text-[var(--file-upload-muted)]" style={{ fontSize: 'var(--file-upload-font-size-sm)' }}>
                                     {(file.size / 1024 / 1024).toFixed(2)} MB
                                 </p>
                             </div>
@@ -225,7 +212,9 @@ export const ButtonUpload: React.FC<ButtonUploadProps> = ({
                                     <button
                                         type="button"
                                         onClick={() => actions.removeFile(file.id)}
-                                        className="text-red-600 hover:text-red-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 rounded px-2 py-1"
+                                        className={cn(
+                                            generateThemeClasses('button', 'sm', 'sm', config, ['file-upload--error', 'file-upload--outline'])
+                                        )}
                                         aria-label={`Remove ${file.name}`}
                                     >
                                         {config.labels.removeText}
@@ -234,9 +223,9 @@ export const ButtonUpload: React.FC<ButtonUploadProps> = ({
 
                                 {file.status === 'uploading' && (
                                     <div className="flex items-center gap-2">
-                                        <div className="w-16 bg-gray-200 rounded-full h-2">
+                                        <div className="w-16 bg-[var(--file-upload-muted)] rounded-full h-2 opacity-30">
                                             <div
-                                                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                                className="bg-[var(--file-upload-primary)] h-2 rounded-full transition-all duration-300"
                                                 style={{ width: `${file.progress}%` }}
                                                 role="progressbar"
                                                 aria-valuenow={file.progress}
@@ -245,14 +234,14 @@ export const ButtonUpload: React.FC<ButtonUploadProps> = ({
                                                 aria-label={`Upload progress: ${file.progress}%`}
                                             />
                                         </div>
-                                        <span className="text-xs text-gray-600 min-w-[3rem]">
+                                        <span className="text-[var(--file-upload-muted)] min-w-[3rem]" style={{ fontSize: 'var(--file-upload-font-size-sm)' }}>
                                             {file.progress}%
                                         </span>
                                     </div>
                                 )}
 
                                 {file.status === 'success' && (
-                                    <div className="flex items-center text-green-600">
+                                    <div className="flex items-center text-[var(--file-upload-success)]">
                                         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                             <path
                                                 fillRule="evenodd"
@@ -268,7 +257,9 @@ export const ButtonUpload: React.FC<ButtonUploadProps> = ({
                                     <button
                                         type="button"
                                         onClick={() => actions.retryUpload(file.id)}
-                                        className="text-red-600 hover:text-red-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 rounded px-2 py-1"
+                                        className={cn(
+                                            generateThemeClasses('button', 'sm', 'sm', config, ['file-upload--error', 'file-upload--outline'])
+                                        )}
                                         aria-label={`Retry upload for ${file.name}`}
                                     >
                                         {config.labels.retryText}
@@ -284,7 +275,11 @@ export const ButtonUpload: React.FC<ButtonUploadProps> = ({
                             type="button"
                             onClick={actions.uploadFiles}
                             disabled={state.isUploading}
-                            className="w-full mt-3 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                            className={cn(
+                                generateThemeClasses('button', 'md', config.defaults.radius, config, ['file-upload--success']),
+                                'w-full mt-3',
+                                state.isUploading ? 'file-upload--disabled' : ''
+                            )}
                         >
                             {state.isUploading ? config.labels.progressText : 'Upload Files'}
                         </button>

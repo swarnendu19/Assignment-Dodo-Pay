@@ -373,7 +373,7 @@ describe('ThemeProvider', () => {
                 </ThemeProvider>
             )
 
-            const button = screen.getByRole('button')
+            const button = screen.getByRole('button', { name: /switch to/i })
 
             // Light -> Dark
             fireEvent.click(button)
