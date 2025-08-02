@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useEffect } from 'react'
 import type { FileUploadProps, FileUploadConfig } from './file-upload.types'
 import { FileUploadProvider } from './file-upload-context'
 import { defaultConfig, mergeConfig, loadConfigFromJSON } from '../../config/schema'
+import { generateThemeClasses, applyTheme, cn } from '../../utils/theme'
 
 // Import variant components
 import { ButtonUpload } from './variants/button-upload'
@@ -125,14 +126,91 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         onUploadRetry: undefined // Will be handled internally
     }), [onUpload, onError, onProgress, onFileSelect, onFileRemove])
 
-    // Get the effective variant from merged config
+    // Apply theme when config changes
+    useEffect(() => {
+        if (mergedConfig.styling?.theme) {
+            applyTheme(mergedConfig.styling.theme, mergedConfig)
+        }
+    }, [mergedConfig])
+
+    // Get the effective values from merged config
     const effectiveVariant = mergedConfig.defaults.variant
+    const effectiveSize = mergedConfig.defaults.size
+    const effectiveRadius = mergedConfig.defaults.radius
+    const effectiveTheme = mergedConfig.styling.theme
+
+    // Generate theme classes
+    const themeClasses = generateThemeClasses(
+        effectiveVariant,
+        effectiveSize,
+        effectiveRadius,
+        mergedConfig
+    )
+
+    // Combine all classes
+    const combinedClassName = cn(
+        themeClasses,
+        disabled && 'file-upload--disabled',
+        className
+    )
+
+    // Generate CSS variables for inline styles
+    const cssVariables = useMemo(() => {
+        const variables: Record<string, string> = {}
+
+        if (mergedConfig.styling) {
+            const { colors, spacing, typography, borders, shadows } = mergedConfig.styling
+
+            // Apply color variables
+            if (colors) {
+                Object.entries(colors).forEach(([key, value]) => {
+                    variables[`--file-upload-${key}`] = value
+                })
+            }
+
+            // Apply spacing variables
+            if (spacing) {
+                Object.entries(spacing).forEach(([key, value]) => {
+                    variables[`--file-upload-spacing-${key}`] = value
+                })
+            }
+
+            // Apply typography variables
+            if (typography) {
+                Object.entries(typography).forEach(([key, value]) => {
+                    variables[`--file-upload-${key}`] = value
+                })
+            }
+
+            // Apply border variables
+            if (borders) {
+                Object.entries(borders).forEach(([key, value]) => {
+                    variables[`--file-upload-border-${key}`] = value
+                })
+            }
+
+            // Apply shadow variables
+            if (shadows) {
+                Object.entries(shadows).forEach(([key, value]) => {
+                    variables[`--file-upload-shadow-${key}`] = value
+                })
+            }
+        }
+
+        return variables
+    }, [mergedConfig])
+
+    // Combine inline styles
+    const combinedStyle = {
+        ...cssVariables,
+        ...style
+    }
 
     // Render the appropriate variant component
     const renderVariant = () => {
         const commonProps = {
-            className,
-            style,
+            className: combinedClassName,
+            style: combinedStyle,
             ariaLabel,
             ariaDescribedBy,
             onDragEnter,
@@ -160,7 +238,13 @@ export const FileUpload: React.FC<FileUploadProps> = ({
 
     return (
         <FileUploadProvider config={mergedConfig} handlers={eventHandlers}>
-            {renderVariant()}
+            <div
+                data-theme={effectiveTheme}
+                className="file-upload-wrapper"
+                style={cssVariables}
+            >
+                {renderVariant()}
+            </div>
         </FileUploadProvider>
     )
 }

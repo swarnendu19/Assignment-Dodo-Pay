@@ -74,3 +74,24 @@ export {
 export type {
     MockUploadConfig
 } from './utils/upload-mock'
+
+// Theme utilities
+export {
+    generateThemeClasses,
+    applyTheme,
+    getSystemTheme,
+    resolveTheme,
+    createThemeWatcher,
+    generateCSSVariables,
+    cn,
+    getResponsiveClasses,
+    validateThemeConfig
+} from './utils/theme'
+
+// Theme provider components
+export {
+    ThemeProvider,
+    useTheme,
+    useThemeVariables,
+    ThemeToggle
+} from './components/theme-provider'
