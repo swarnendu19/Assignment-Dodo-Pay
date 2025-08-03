@@ -1,10 +1,11 @@
 {
-  "name": "file-upload-component-library",
+  "name": "zentrixui",
   "private": false,
   "version": "1.0.0",
-  "description": "A highly customizable and accessible React file upload component library with multiple variants, JSON-based configuration, and excellent developer experience.",
+  "description": "ZentrixUI - A modern, highly customizable and accessible React file upload component library with multiple variants, JSON-based configuration, and excellent developer experience.",
   "type": "module",
   "keywords": [
+    "zentrixui",
     "react",
     "file-upload",
     "component-library",
@@ -14,18 +15,20 @@
     "drag-drop",
     "radix-ui",
     "customizable",
-    "json-config"
+    "json-config",
+    "ui-components",
+    "modern-ui"
   ],
-  "author": "Your Name",
+  "author": "ZentrixUI Team",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/file-upload-component-library.git"
+    "url": "https://github.com/zentrixui/zentrixui.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/file-upload-component-library/issues"
+    "url": "https://github.com/zentrixui/zentrixui/issues"
   },
-  "homepage": "https://github.com/yourusername/file-upload-component-library#readme",
+  "homepage": "https://zentrixui.com",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -94,19 +97,26 @@
   ],
   "scripts": {
     "dev": "vite",
-    "build": "npm run build:lib",
+    "build": "npm run clean && npm run build:lib && npm run build:demo",
     "build:lib": "vite build --mode lib",
     "build:demo": "vite build --mode demo",
     "build:types": "tsc -p tsconfig.lib.json --emitDeclarationOnly",
-    "clean": "rimraf dist",
-    "lint": "eslint .",
+    "clean": "rimraf dist dist-demo",
+    "lint": "eslint . --fix",
+    "lint:check": "eslint .",
     "preview": "vite preview",
+    "preview:demo": "vite preview --outDir dist-demo",
     "test": "vitest",
     "test:run": "vitest run",
     "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
     "pack:local": "npm pack",
-    "prepublishOnly": "npm run clean && npm run build:lib",
-    "test:build": "node -e \"console.log('Build test: checking exports...'); require('./dist/index.cjs'); import('./dist/index.js').then(() => console.log('✓ Build test passed'))\""
+    "prepublishOnly": "npm run clean && npm run lint:check && npm run test:run && npm run build:lib",
+    "postbuild": "npm run test:build",
+    "test:build": "node -e \"console.log('Build test: checking exports...'); require('./dist/index.cjs'); import('./dist/index.js').then(() => console.log('✓ Build test passed'))\"",
+    "size-check": "bundlesize",
+    "release": "npm run prepublishOnly && npm publish",
+    "release:beta": "npm run prepublishOnly && npm publish --tag beta"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.3",
