@@ -379,6 +379,9 @@ export interface ValidationError {
     path: string
     message: string
     value?: any
+    severity?: 'error' | 'warning'
+    code?: string
+    suggestion?: string
 }
 
 
@@ -689,23 +692,58 @@ function validateAccessibility(accessibility: any, errors: ValidationError[]) {
 }
 
 
+/**
+ * Removes null and undefined values from an object recursively
+ */
+function cleanNullValues(obj: any): any {
+    if (obj === null || obj === undefined) {
+        return undefined
+    }
+
+    if (Array.isArray(obj)) {
+        return obj.filter(item => item !== null && item !== undefined)
+    }
+
+    if (typeof obj === 'object') {
+        const cleaned: any = {}
+        for (const [key, value] of Object.entries(obj)) {
+            if (value !== null && value !== undefined) {
+                if (typeof value === 'object' && !Array.isArray(value)) {
+                    const cleanedValue = cleanNullValues(value)
+                    if (cleanedValue !== undefined && Object.keys(cleanedValue).length > 0) {
+                        cleaned[key] = cleanedValue
+                    }
+                } else {
+                    cleaned[key] = value
+                }
+            }
+        }
+        return cleaned
+    }
+
+    return obj
+}
+
 export function mergeConfig(userConfig: Partial<FileUploadConfig>): FileUploadConfig {
+    // Clean null values from user config before merging
+    const cleanedUserConfig = cleanNullValues(userConfig)
+
     return {
-        defaults: { ...defaultConfig.defaults, ...userConfig.defaults },
-        validation: { ...defaultConfig.validation, ...userConfig.validation },
+        defaults: { ...defaultConfig.defaults, ...cleanedUserConfig.defaults },
+        validation: { ...defaultConfig.validation, ...cleanedUserConfig.validation },
         styling: {
             ...defaultConfig.styling,
-            ...userConfig.styling,
-            colors: { ...defaultConfig.styling.colors, ...userConfig.styling?.colors },
-            spacing: { ...defaultConfig.styling.spacing, ...userConfig.styling?.spacing },
-            typography: { ...defaultConfig.styling.typography, ...userConfig.styling?.typography },
-            borders: { ...defaultConfig.styling.borders, ...userConfig.styling?.borders },
-            shadows: { ...defaultConfig.styling.shadows, ...userConfig.styling?.shadows }
+            ...cleanedUserConfig.styling,
+            colors: { ...defaultConfig.styling.colors, ...cleanedUserConfig.styling?.colors },
+            spacing: { ...defaultConfig.styling.spacing, ...cleanedUserConfig.styling?.spacing },
+            typography: { ...defaultConfig.styling.typography, ...cleanedUserConfig.styling?.typography },
+            borders: { ...defaultConfig.styling.borders, ...cleanedUserConfig.styling?.borders },
+            shadows: { ...defaultConfig.styling.shadows, ...cleanedUserConfig.styling?.shadows }
         },
-        labels: { ...defaultConfig.labels, ...userConfig.labels },
-        features: { ...defaultConfig.features, ...userConfig.features },
-        animations: { ...defaultConfig.animations, ...userConfig.animations },
-        accessibility: { ...defaultConfig.accessibility, ...userConfig.accessibility }
+        labels: { ...defaultConfig.labels, ...cleanedUserConfig.labels },
+        features: { ...defaultConfig.features, ...cleanedUserConfig.features },
+        animations: { ...defaultConfig.animations, ...cleanedUserConfig.animations },
+        accessibility: { ...defaultConfig.accessibility, ...cleanedUserConfig.accessibility }
     }
 }
 
@@ -713,10 +751,13 @@ export function mergeConfig(userConfig: Partial<FileUploadConfig>): FileUploadCo
 export function loadConfigFromJSON(jsonString: string): { config: FileUploadConfig | null; errors: ValidationError[] } {
     try {
         const parsed = JSON.parse(jsonString)
-        const validation = validateConfig(parsed)
+
+        // For partial configurations, we merge first then validate
+        const mergedConfig = mergeConfig(parsed)
+        const validation = validateConfig(mergedConfig)
 
         if (validation.isValid) {
-            return { config: mergeConfig(parsed), errors: [] }
+            return { config: mergedConfig, errors: [] }
         } else {
             return { config: null, errors: validation.errors }
         }
