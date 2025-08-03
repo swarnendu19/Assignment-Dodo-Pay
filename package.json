@@ -2,31 +2,111 @@
   "name": "file-upload-component-library",
   "private": false,
   "version": "1.0.0",
+  "description": "A highly customizable and accessible React file upload component library with multiple variants, JSON-based configuration, and excellent developer experience.",
   "type": "module",
-  "main": "./dist/index.js",
+  "keywords": [
+    "react",
+    "file-upload",
+    "component-library",
+    "typescript",
+    "tailwindcss",
+    "accessibility",
+    "drag-drop",
+    "radix-ui",
+    "customizable",
+    "json-config"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/file-upload-component-library.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/file-upload-component-library/issues"
+  },
+  "homepage": "https://github.com/yourusername/file-upload-component-library#readme",
+  "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.cjs"
+      }
     },
-    "./styles": "./dist/style.css"
+    "./components": {
+      "import": {
+        "types": "./dist/components.d.ts",
+        "default": "./dist/components.js"
+      },
+      "require": {
+        "types": "./dist/components.d.ts",
+        "default": "./dist/components.cjs"
+      }
+    },
+    "./config": {
+      "import": {
+        "types": "./dist/config.d.ts",
+        "default": "./dist/config.js"
+      },
+      "require": {
+        "types": "./dist/config.d.ts",
+        "default": "./dist/config.cjs"
+      }
+    },
+    "./utils": {
+      "import": {
+        "types": "./dist/utils.d.ts",
+        "default": "./dist/utils.js"
+      },
+      "require": {
+        "types": "./dist/utils.d.ts",
+        "default": "./dist/utils.cjs"
+      }
+    },
+    "./theme": {
+      "import": {
+        "types": "./dist/theme.d.ts",
+        "default": "./dist/theme.js"
+      },
+      "require": {
+        "types": "./dist/theme.d.ts",
+        "default": "./dist/theme.cjs"
+      }
+    },
+    "./styles": "./dist/style.css",
+    "./package.json": "./package.json"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": [
+    "*.css",
+    "./dist/style.css"
   ],
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "npm run build:lib",
     "build:lib": "vite build --mode lib",
     "build:demo": "vite build --mode demo",
+    "build:types": "tsc -p tsconfig.lib.json --emitDeclarationOnly",
+    "clean": "rimraf dist",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run",
     "test:ui": "vitest --ui",
-    "prepublishOnly": "npm run build:lib"
+    "pack:local": "npm pack",
+    "prepublishOnly": "npm run clean && npm run build:lib",
+    "test:build": "node -e \"console.log('Build test: checking exports...'); require('./dist/index.cjs'); import('./dist/index.js').then(() => console.log('✓ Build test passed'))\""
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.3",
@@ -59,6 +139,7 @@
     "jsdom": "^26.1.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "rimraf": "^6.0.1",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.35.1",
     "vite": "^7.0.4",

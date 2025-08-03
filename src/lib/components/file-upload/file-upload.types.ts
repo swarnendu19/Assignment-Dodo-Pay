@@ -1,4 +1,5 @@
 import { ReactNode } from 'react'
+import { ProcessedError } from '../../utils/error-handling'
 
 export type FileUploadVariant = 'button' | 'dropzone' | 'preview' | 'image-only' | 'multi-file'
 export type FileUploadSize = 'sm' | 'md' | 'lg'
@@ -260,6 +261,7 @@ export interface FileUploadEventHandlers {
 export interface FileUploadContextValue {
     state: FileUploadState
     config: FileUploadConfig
+    processedErrors: ProcessedError[]
     actions: {
         selectFiles: (files: File[]) => void
         removeFile: (fileId: string) => void
@@ -269,6 +271,18 @@ export interface FileUploadContextValue {
         updateProgress: (fileId: string, progress: number) => void
         setError: (fileId: string, error: string) => void
         setSuccess: (fileId: string) => void
+        handleError: (error: Error | string, context?: {
+            fileName?: string
+            fileId?: string
+            operation?: string
+        }) => ProcessedError | null
+        handleValidationErrors: (errors: (Error | string)[], context?: {
+            operation?: string
+        }) => ProcessedError[]
+        dismissError: (errorId: string) => void
+        dismissAllErrors: () => void
+        retryFailedUploads: () => void
+        clearFailedUploads: () => void
     }
     handlers: FileUploadEventHandlers
 }

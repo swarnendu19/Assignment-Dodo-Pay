@@ -14,25 +14,56 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       tailwindcss(),
-      ...(isLib ? [dts({ include: ['src/lib'] })] : [])
+      ...(isLib ? [
+        dts({
+          include: ['src/lib/**/*'],
+          exclude: ['src/lib/**/*.test.ts', 'src/lib/**/*.test.tsx', 'src/lib/**/__tests__/**/*'],
+          outDir: 'dist',
+          insertTypesEntry: true,
+          rollupTypes: false,
+          copyDtsFiles: true
+        })
+      ] : [])
     ],
     ...(isLib ? {
       build: {
         lib: {
-          entry: path.resolve(__dirname, 'src/lib/index.ts'),
-          name: 'FileUploadComponentLibrary',
-          fileName: 'index',
-          formats: ['es']
+          entry: {
+            index: path.resolve(__dirname, 'src/lib/index.ts'),
+            components: path.resolve(__dirname, 'src/lib/components/index.ts'),
+            config: path.resolve(__dirname, 'src/lib/config/index.ts'),
+            utils: path.resolve(__dirname, 'src/lib/utils/index.ts'),
+            theme: path.resolve(__dirname, 'src/lib/components/theme-provider.tsx')
+          },
+          formats: ['es', 'cjs']
         },
         rollupOptions: {
-          external: ['react', 'react-dom'],
-          output: {
-            globals: {
-              react: 'React',
-              'react-dom': 'ReactDOM'
+          external: [
+            'react',
+            'react-dom',
+            'react/jsx-runtime'
+          ],
+          output: [
+            {
+              format: 'es',
+              entryFileNames: '[name].js',
+              chunkFileNames: 'chunks/[name]-[hash].js',
+              assetFileNames: 'assets/[name]-[hash][extname]',
+              preserveModules: true,
+              preserveModulesRoot: 'src/lib',
+              exports: 'named'
+            },
+            {
+              format: 'cjs',
+              entryFileNames: '[name].cjs',
+              chunkFileNames: 'chunks/[name]-[hash].cjs',
+              assetFileNames: 'assets/[name]-[hash][extname]',
+              exports: 'named'
             }
-          }
-        }
+          ]
+        },
+        sourcemap: true,
+        minify: false
       }
     } : {
       root: 'demo',

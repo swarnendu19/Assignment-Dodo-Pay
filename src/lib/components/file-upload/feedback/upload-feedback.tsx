@@ -4,6 +4,7 @@ import { ProgressBar } from '../progress/progress-bar'
 import { StatusIndicator } from '../progress/status-indicator'
 import { LoadingSpinner } from '../progress/loading-spinner'
 import { AccessibilityAnnouncer } from '../progress/accessibility-announcer'
+import { ErrorFeedback } from './error-feedback'
 import type { UploadFile } from '../file-upload.types'
 
 interface UploadFeedbackProps {
@@ -14,6 +15,11 @@ interface UploadFeedbackProps {
     showStatusIndicators?: boolean
     showFileNames?: boolean
     enableAccessibilityAnnouncements?: boolean
+    showErrorFeedback?: boolean
+    showAccessibilityAnnouncer?: boolean
+    layout?: 'default' | 'compact'
+    progressSize?: 'sm' | 'md' | 'lg'
+    statusSize?: 'sm' | 'md' | 'lg'
     maxVisibleFiles?: number
     className?: string
     onRetry?: (fileId: string) => void
@@ -28,6 +34,11 @@ export const UploadFeedback: React.FC<UploadFeedbackProps> = ({
     showStatusIndicators = true,
     showFileNames = true,
     enableAccessibilityAnnouncements = true,
+    showErrorFeedback = true,
+    showAccessibilityAnnouncer = true,
+    layout = 'default',
+    progressSize = 'md',
+    statusSize = 'md',
     maxVisibleFiles = 10,
     className,
     onRetry,
@@ -57,6 +68,14 @@ export const UploadFeedback: React.FC<UploadFeedbackProps> = ({
 
     return (
         <div className={cn('space-y-4', className)}>
+            {/* Error Feedback */}
+            {showErrorFeedback && (
+                <ErrorFeedback
+                    compact={layout === 'compact'}
+                    showAccessibilityAnnouncer={showAccessibilityAnnouncer}
+                />
+            )}
+
             {enableAccessibilityAnnouncements && (
                 <AccessibilityAnnouncer
                     files={files}

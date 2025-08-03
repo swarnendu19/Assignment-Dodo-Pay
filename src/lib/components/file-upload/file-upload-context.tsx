@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useCallback } from 'react'
+import React, { createContext, useContext, useReducer, useCallback, useState } from 'react'
 import type {
     FileUploadState,
     FileUploadConfig,
@@ -6,6 +6,7 @@ import type {
     FileUploadEventHandlers,
     FileUploadContextValue
 } from './file-upload.types'
+import { processError, processErrors, ProcessedError, logError } from '../../utils/error-handling'
 
 // Initial state
 const initialState: FileUploadState = {
@@ -128,6 +129,7 @@ export const FileUploadProvider: React.FC<FileUploadProviderProps> = ({
     handlers = {}
 }) => {
     const [state, dispatch] = useReducer(fileUploadReducer, initialState)
+    const [processedErrors, setProcessedErrors] = useState<ProcessedError[]>([])
 
     // Actions
     const selectFiles = useCallback((files: File[]) => {
@@ -320,9 +322,123 @@ export const FileUploadProvider: React.FC<FileUploadProviderProps> = ({
         })
     }, [])
 
+    // Enhanced error handling methods
+    const handleError = useCallback((error: Error | string, context: {
+        fileName?: string
+        fileId?: string
+        operation?: string
+    } = {}) => {
+        try {
+            const processedError = processError(error, {
+                fileName: context.fileName,
+                operation: context.operation,
+                timestamp: new Date()
+            }, config)
+
+            // Log the error
+            logError(processedError, { fileId: context.fileId })
+
+            // Add to processed errors list
+            setProcessedErrors(prev => [...prev, processedError])
+
+            // Update file-specific error if fileId provided
+            if (context.fileId) {
+                setError(context.fileId, processedError.userMessage)
+            } else {
+                // Set global error
+                dispatch({ type: 'SET_ERROR', payload: processedError.userMessage })
+            }
+
+            // Call error handler if provided
+            if (handlers.onUploadError) {
+                const file = context.fileId ? state.files.find(f => f.id === context.fileId) : undefined
+                handlers.onUploadError({
+                    type: 'error',
+                    files: file ? [{ ...file, status: 'error', error: processedError.userMessage }] : [],
+                    timestamp: new Date()
+                })
+            }
+
+            return processedError
+        } catch (processingError) {
+            console.error('Error processing error:', processingError)
+            const fallbackMessage = typeof error === 'string' ? error : error.message
+            dispatch({ type: 'SET_ERROR', payload: fallbackMessage })
+            return null
+        }
+    }, [config, handlers, state.files, setError])
+
+    const handleValidationErrors = useCallback((errors: (Error | string)[], context: {
+        operation?: string
+    } = {}) => {
+        try {
+            const { errors: processedErrors } = processErrors(errors, {
+                operation: context.operation,
+                timestamp: new Date()
+            }, config)
+
+            // Log all errors
+            processedErrors.forEach(error => logError(error))
+
+            // Add to processed errors list
+            setProcessedErrors(prev => [...prev, ...processedErrors])
+
+            // Set global error with summary
+            const errorSummary = processedErrors.length === 1
+                ? processedErrors[0].userMessage
+                : `${processedErrors.length} validation errors occurred`
+
+            dispatch({ type: 'SET_ERROR', payload: errorSummary })
+
+            return processedErrors
+        } catch (processingError) {
+            console.error('Error processing validation errors:', processingError)
+            dispatch({ type: 'SET_ERROR', payload: 'Multiple validation errors occurred' })
+            return []
+        }
+    }, [config])
+
+    const dismissError = useCallback((errorId: string) => {
+        setProcessedErrors(prev => prev.filter(error => error.id !== errorId))
+    }, [])
+
+    const dismissAllErrors = useCallback(() => {
+        setProcessedErrors([])
+        dispatch({ type: 'SET_ERROR', payload: null })
+    }, [])
+
+    const retryFailedUploads = useCallback(() => {
+        const failedFiles = state.files.filter(f => f.status === 'error')
+        failedFiles.forEach(file => {
+            if (file.retryCount < file.maxRetries) {
+                retryUpload(file.id)
+            }
+        })
+    }, [state.files, retryUpload])
+
+    const clearFailedUploads = useCallback(() => {
+        const failedFileIds = state.files
+            .filter(f => f.status === 'error')
+            .map(f => f.id)
+
+        failedFileIds.forEach(fileId => {
+            dispatch({ type: 'REMOVE_FILE', payload: fileId })
+        })
+
+        // Clear related errors
+        setProcessedErrors(prev =>
+            prev.filter(error =>
+                !failedFileIds.some(fileId => error.context.fileName ===
+                    state.files.find(f => f.id === fileId)?.name
+                )
+            )
+        )
+    }, [state.files])
+
     const contextValue: FileUploadContextValue = {
         state,
         config,
+        processedErrors,
         actions: {
             selectFiles,
             removeFile,
@@ -331,7 +447,13 @@ export const FileUploadProvider: React.FC<FileUploadProviderProps> = ({
             uploadFiles,
             updateProgress,
             setError,
-            setSuccess
+            setSuccess,
+            handleError,
+            handleValidationErrors,
+            dismissError,
+            dismissAllErrors,
+            retryFailedUploads,
+            clearFailedUploads
         },
         handlers
     }

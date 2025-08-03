@@ -1,0 +1,38 @@
+{
+    "compilerOptions": {
+        "target": "ES2022",
+        "useDefineForClassFields": true,
+        "lib": [
+            "ES2022",
+            "DOM",
+            "DOM.Iterable"
+        ],
+        "module": "ESNext",
+        "skipLibCheck": true,
+        "moduleResolution": "bundler",
+        "moduleDetection": "force",
+        "jsx": "react-jsx",
+        "strict": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noFallthroughCasesInSwitch": true,
+        "outDir": "./dist",
+        "declaration": true,
+        "declarationMap": true,
+        "emitDeclarationOnly": true,
+        "composite": true,
+        "incremental": true,
+        "tsBuildInfoFile": "./dist/.tsbuildinfo"
+    },
+    "include": [
+        "src/lib/**/*"
+    ],
+    "exclude": [
+        "src/lib/**/*.test.ts",
+        "src/lib/**/*.test.tsx",
+        "src/lib/**/__tests__/**/*",
+        "demo/**/*",
+        "dist/**/*",
+        "node_modules/**/*"
+    ]
+}

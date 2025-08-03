@@ -3,6 +3,7 @@ import type { FileUploadProps, FileUploadConfig } from './file-upload.types'
 import { FileUploadProvider } from './file-upload-context'
 import { defaultConfig, mergeConfig, loadConfigFromJSON } from '../../config/schema'
 import { generateThemeClasses, applyTheme, cn } from '../../utils/theme'
+import { FileUploadErrorBoundary } from './error-boundary'
 
 // Import variant components
 import { ButtonUpload } from './variants/button-upload'
@@ -237,15 +238,23 @@ export const FileUpload: React.FC<FileUploadProps> = ({
     }
 
     return (
-        <FileUploadProvider config={mergedConfig} handlers={eventHandlers}>
-            <div
-                data-theme={effectiveTheme}
-                className="file-upload-wrapper"
-                style={cssVariables}
-            >
-                {renderVariant()}
-            </div>
-        </FileUploadProvider>
+        <FileUploadErrorBoundary
+            onError={(error, errorInfo) => {
+                console.error('FileUpload component crashed:', error, errorInfo)
+                onError?.(error.message)
+            }}
+            showErrorDetails={process.env.NODE_ENV === 'development'}
+        >
+            <FileUploadProvider config={mergedConfig} handlers={eventHandlers}>
+                <div
+                    data-theme={effectiveTheme}
+                    className="file-upload-wrapper"
+                    style={cssVariables}
+                >
+                    {renderVariant()}
+                </div>
+            </FileUploadProvider>
+        </FileUploadErrorBoundary>
     )
 }
 
