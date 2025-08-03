@@ -3,6 +3,8 @@ import { Slot } from '@radix-ui/react-slot'
 import { useFileUpload } from '../file-upload-context'
 import { validateFiles } from '../../../utils/file-validation'
 import { generateThemeClasses, cn } from '../../../utils/theme'
+import { UploadFeedback } from '../feedback'
+import { LoadingSpinner, ProgressBar, StatusIndicator } from '../progress'
 import type { ButtonUploadProps } from '../file-upload.types'
 
 export const ButtonUpload: React.FC<ButtonUploadProps> = ({
@@ -110,22 +112,7 @@ export const ButtonUpload: React.FC<ButtonUploadProps> = ({
         if (state.isUploading) {
             return (
                 <>
-                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                        <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                            fill="none"
-                        />
-                        <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        />
-                    </svg>
+                    <LoadingSpinner size="sm" color="primary" />
                     {config.labels.progressText}
                 </>
             )
@@ -182,6 +169,21 @@ export const ButtonUpload: React.FC<ButtonUploadProps> = ({
                 {renderButtonContent()}
             </Comp>
 
+            {/* Overall progress feedback */}
+            {state.files.length > 0 && (
+                <div className="mt-4">
+                    <UploadFeedback
+                        showOverallProgress={true}
+                        showIndividualProgress={false}
+                        showStatusIndicator={true}
+                        showAccessibilityAnnouncer={true}
+                        layout="compact"
+                        progressSize="sm"
+                        statusSize="sm"
+                    />
+                </div>
+            )}
+
             {/* File list display */}
             {state.files.length > 0 && (
                 <div className="mt-4 space-y-2" role="list" aria-label="Selected files">
@@ -208,6 +210,23 @@ export const ButtonUpload: React.FC<ButtonUploadProps> = ({
                             </div>
 
                             <div className="flex items-center gap-2 ml-4">
+                                <StatusIndicator
+                                    status={file.status}
+                                    size="sm"
+                                    showText={false}
+                                />
+
+                                {file.status === 'uploading' && (
+                                    <div className="w-16">
+                                        <ProgressBar
+                                            file={file}
+                                            size="sm"
+                                            showLabel={false}
+                                            showPercentage={false}
+                                        />
+                                    </div>
+                                )}
+
                                 {file.status === 'pending' && (
                                     <button
                                         type="button"
@@ -219,38 +238,6 @@ export const ButtonUpload: React.FC<ButtonUploadProps> = ({
                                     >
                                         {config.labels.removeText}
                                     </button>
-                                )}
-
-                                {file.status === 'uploading' && (
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-16 bg-[var(--file-upload-muted)] rounded-full h-2 opacity-30">
-                                            <div
-                                                className="bg-[var(--file-upload-primary)] h-2 rounded-full transition-all duration-300"
-                                                style={{ width: `${file.progress}%` }}
-                                                role="progressbar"
-                                                aria-valuenow={file.progress}
-                                                aria-valuemin={0}
-                                                aria-valuemax={100}
-                                                aria-label={`Upload progress: ${file.progress}%`}
-                                            />
-                                        </div>
-                                        <span className="text-[var(--file-upload-muted)] min-w-[3rem]" style={{ fontSize: 'var(--file-upload-font-size-sm)' }}>
-                                            {file.progress}%
-                                        </span>
-                                    </div>
-                                )}
-
-                                {file.status === 'success' && (
-                                    <div className="flex items-center text-[var(--file-upload-success)]">
-                                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                            <path
-                                                fillRule="evenodd"
-                                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                                clipRule="evenodd"
-                                            />
-                                        </svg>
-                                        <span className="sr-only">Upload successful</span>
-                                    </div>
                                 )}
 
                                 {file.status === 'error' && (

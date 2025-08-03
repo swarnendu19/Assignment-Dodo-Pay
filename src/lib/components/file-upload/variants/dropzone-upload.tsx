@@ -1,5 +1,7 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react'
 import { useFileUpload } from '../file-upload-context'
+import { UploadFeedback } from '../feedback'
+import { LoadingSpinner, ProgressBar, StatusIndicator } from '../progress'
 
 interface DropzoneUploadProps {
     className?: string
@@ -188,8 +190,8 @@ export const DropzoneUpload: React.FC<DropzoneUploadProps> = ({
     // Dynamic styling based on state
     const dropzoneStyle: React.CSSProperties = {
         border: showBorder ? `2px ${config.styling.borders.style} ${isActive ? config.styling.colors.primary :
-                hasFocus ? config.styling.colors.primary :
-                    config.styling.colors.border
+            hasFocus ? config.styling.colors.primary :
+                config.styling.colors.border
             }` : 'none',
         borderRadius: config.styling.spacing.borderRadius,
         padding: '2rem',
@@ -294,6 +296,21 @@ export const DropzoneUpload: React.FC<DropzoneUploadProps> = ({
                 )}
             </div>
 
+            {/* Overall progress feedback */}
+            {state.files.length > 0 && (
+                <div style={{ marginTop: config.styling.spacing.margin }}>
+                    <UploadFeedback
+                        showOverallProgress={true}
+                        showIndividualProgress={false}
+                        showStatusIndicator={true}
+                        showAccessibilityAnnouncer={true}
+                        layout="vertical"
+                        progressSize="md"
+                        statusSize="sm"
+                    />
+                </div>
+            )}
+
             {/* Display selected files */}
             {state.files.length > 0 && (
                 <div className="file-upload-files" style={{ marginTop: config.styling.spacing.margin }}>
@@ -328,43 +345,21 @@ export const DropzoneUpload: React.FC<DropzoneUploadProps> = ({
                                 alignItems: 'center',
                                 gap: '0.5rem'
                             }}>
-                                {file.status === 'uploading' && (
-                                    <div className="file-upload-progress" style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '0.5rem'
-                                    }}>
-                                        <div style={{
-                                            width: '60px',
-                                            height: '4px',
-                                            backgroundColor: config.styling.colors.border,
-                                            borderRadius: '2px',
-                                            overflow: 'hidden'
-                                        }}>
-                                            <div style={{
-                                                width: `${file.progress}%`,
-                                                height: '100%',
-                                                backgroundColor: config.styling.colors.primary,
-                                                transition: 'width 0.3s ease'
-                                            }} />
-                                        </div>
-                                        <span style={{
-                                            fontSize: '0.75rem',
-                                            color: config.styling.colors.primary,
-                                            minWidth: '35px'
-                                        }}>
-                                            {file.progress}%
-                                        </span>
-                                    </div>
-                                )}
+                                <StatusIndicator
+                                    status={file.status}
+                                    size="sm"
+                                    showText={false}
+                                />
 
-                                {file.status === 'success' && (
-                                    <span style={{
-                                        color: config.styling.colors.success,
-                                        fontSize: '1.25rem'
-                                    }}>
-                                        ✓
-                                    </span>
+                                {file.status === 'uploading' && (
+                                    <div style={{ width: '60px' }}>
+                                        <ProgressBar
+                                            file={file}
+                                            size="sm"
+                                            showLabel={false}
+                                            showPercentage={true}
+                                        />
+                                    </div>
                                 )}
 
                                 {file.status === 'error' && (

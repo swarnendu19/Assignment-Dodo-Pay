@@ -1,6 +1,7 @@
 import React, { useRef, useCallback, useState, useEffect } from 'react'
 import { useFileUpload } from '../file-upload-context'
 import { validateFiles } from '../../../utils/file-validation'
+import { UploadFeedback } from '../feedback/upload-feedback'
 import type { MultiFileUploadProps, UploadFile } from '../file-upload.types'
 
 export const MultiFileUpload: React.FC<MultiFileUploadProps> = ({
@@ -235,124 +236,7 @@ export const MultiFileUpload: React.FC<MultiFileUploadProps> = ({
         return [...baseClasses, ...stateClasses, className].filter(Boolean).join(' ')
     }
 
-    // Render file item
-    const renderFileItem = (file: UploadFile, index: number) => {
-        const isSelected = selectedFileIds.has(file.id)
-        const isFocused = focusedIndex === index
 
-        const itemClasses = [
-            'flex items-center gap-3 p-3 rounded-md border transition-colors',
-            isSelected ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-200',
-            isFocused ? 'ring-2 ring-blue-500 ring-offset-1' : '',
-            'hover:bg-gray-50 cursor-pointer'
-        ].filter(Boolean).join(' ')
-
-        return (
-            <div
-                key={file.id}
-                className={itemClasses}
-                role="option"
-                aria-selected={isSelected}
-                tabIndex={isFocused ? 0 : -1}
-                onClick={() => handleFileToggle(file.id)}
-                onFocus={() => setFocusedIndex(index)}
-            >
-                {/* Checkbox */}
-                <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={() => handleFileToggle(file.id)}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    aria-label={`Select ${file.name}`}
-                />
-
-                {/* File info */}
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                            {file.name}
-                        </p>
-                        <span className="text-xs text-gray-500 ml-2">
-                            {(file.size / 1024 / 1024).toFixed(2)} MB
-                        </span>
-                    </div>
-
-                    {/* Progress bar for uploading files */}
-                    {file.status === 'uploading' && (
-                        <div className="mt-2">
-                            <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
-                                <span>Uploading...</span>
-                                <span>{file.progress}%</span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                                <div
-                                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                                    style={{ width: `${file.progress}%` }}
-                                    role="progressbar"
-                                    aria-valuenow={file.progress}
-                                    aria-valuemin={0}
-                                    aria-valuemax={100}
-                                />
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Error message */}
-                    {file.status === 'error' && file.error && (
-                        <p className="text-xs text-red-600 mt-1">{file.error}</p>
-                    )}
-                </div>
-
-                {/* Status indicator */}
-                <div className="flex items-center gap-2">
-                    {file.status === 'success' && (
-                        <div className="text-green-600" title="Upload successful">
-                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                <path
-                                    fillRule="evenodd"
-                                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                    clipRule="evenodd"
-                                />
-                            </svg>
-                        </div>
-                    )}
-
-                    {file.status === 'error' && (
-                        <button
-                            type="button"
-                            onClick={(e) => {
-                                e.stopPropagation()
-                                actions.retryUpload(file.id)
-                            }}
-                            className="text-red-600 hover:text-red-800 p-1 rounded focus:outline-none focus:ring-2 focus:ring-red-500"
-                            title="Retry upload"
-                            aria-label={`Retry upload for ${file.name}`}
-                        >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                        </button>
-                    )}
-
-                    {/* Individual remove button */}
-                    <button
-                        type="button"
-                        onClick={(e) => {
-                            e.stopPropagation()
-                            actions.removeFile(file.id)
-                        }}
-                        className="text-gray-400 hover:text-red-600 p-1 rounded focus:outline-none focus:ring-2 focus:ring-red-500"
-                        title="Remove file"
-                        aria-label={`Remove ${file.name}`}
-                    >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
-            </div>
-        )
-    }
 
     const hasFiles = state.files.length > 0
     const hasSelectedFiles = selectedFileIds.size > 0
@@ -418,7 +302,7 @@ export const MultiFileUpload: React.FC<MultiFileUploadProps> = ({
                 </div>
             </div>
 
-            {/* File list */}
+            {/* File list with progress feedback */}
             {hasFiles && (
                 <div className="mt-6">
                     {/* Bulk actions */}
@@ -499,15 +383,18 @@ export const MultiFileUpload: React.FC<MultiFileUploadProps> = ({
                         </div>
                     )}
 
-                    {/* File list */}
-                    <div
-                        className={`space-y-2 ${listLayout === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3' : ''}`}
-                        role="listbox"
-                        aria-multiselectable="true"
-                        aria-label="File list"
-                    >
-                        {state.files.map((file, index) => renderFileItem(file, index))}
-                    </div>
+                    {/* Upload feedback with progress indicators */}
+                    <UploadFeedback
+                        files={state.files}
+                        isUploading={state.isUploading}
+                        showIndividualProgress={true}
+                        showOverallProgress={state.files.length > 1}
+                        showStatusIndicators={true}
+                        showFileNames={true}
+                        enableAccessibilityAnnouncements={config.accessibility?.announceProgress ?? true}
+                        onRetry={actions.retryUpload}
+                        onRemove={actions.removeFile}
+                    />
 
                     {/* Keyboard shortcuts help */}
                     <div className="mt-4 text-xs text-gray-500 space-y-1">
