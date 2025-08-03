@@ -149,7 +149,7 @@ export const PreviewUpload: React.FC<PreviewUploadProps> = ({
         }
 
         updatePreviews()
-    }, [state.files, generateFilePreview, previews])
+    }, [state.files, generateFilePreview])
 
     // Handle file selection with validation
     const handleFileSelect = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {

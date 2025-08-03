@@ -61,19 +61,19 @@ export {
     diffConfigurations
 } from './config/utils'
 
-// Upload mock utilities
-export {
-    MockUploadService,
-    mockUploadService,
-    mockUpload,
-    mockUploadMultiple,
-    createUploadFile,
-    updateUploadFileStatus
-} from './utils/upload-mock'
+// Upload mock utilities - temporarily commented out due to module resolution issues
+// export {
+//     MockUploadService,
+//     mockUploadService,
+//     mockUpload,
+//     mockUploadMultiple,
+//     createUploadFile,
+//     updateUploadFileStatus
+// } from './utils/upload-mock'
 
-export type {
-    MockUploadConfig
-} from './utils/upload-mock'
+// export type {
+//     MockUploadConfig
+// } from './utils/upload-mock'
 
 // Theme utilities
 export {

@@ -1,5 +1,5 @@
 import React from 'react'
-import { cn } from '../../../utils/cn'
+import { cn } from '../../../utils/theme'
 import { ProgressBar } from '../progress/progress-bar'
 import { StatusIndicator } from '../progress/status-indicator'
 import { LoadingSpinner } from '../progress/loading-spinner'
@@ -21,7 +21,7 @@ interface UploadFeedbackProps {
 }
 
 export const UploadFeedback: React.FC<UploadFeedbackProps> = ({
-    files,
+    files = [],
     isUploading,
     showIndividualProgress = true,
     showOverallProgress = true,
@@ -33,7 +33,7 @@ export const UploadFeedback: React.FC<UploadFeedbackProps> = ({
     onRetry,
     onRemove
 }) => {
-    if (files.length === 0) {
+    if (!files || files.length === 0) {
         return null
     }
 
