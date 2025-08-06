@@ -92,6 +92,8 @@ temp/
 *.sw?
 *~
 
+small-version 
+
 # OS generated files
 .DS_Store
 .DS_Store?

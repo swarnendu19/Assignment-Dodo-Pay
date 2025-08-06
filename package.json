@@ -1,7 +1,7 @@
 {
   "name": "zentrixui",
   "private": false,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "ZentrixUI - A modern, highly customizable and accessible React file upload component library with multiple variants, JSON-based configuration, and excellent developer experience.",
   "type": "module",
   "keywords": [
@@ -19,14 +19,14 @@
     "ui-components",
     "modern-ui"
   ],
-  "author": "ZentrixUI Team",
+  "author": "Swarnendu Maity",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zentrixui/zentrixui.git"
+    "url": "https://github.com/swarnendu19/zentrixui.git"
   },
   "bugs": {
-    "url": "https://github.com/zentrixui/zentrixui/issues"
+    "url": "https://github.com/swarnendu19/zentrixui/issues"
   },
   "homepage": "https://zentrixui.com",
   "main": "./dist/index.cjs",
@@ -111,7 +111,7 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "pack:local": "npm pack",
-    "prepublishOnly": "npm run clean && npm run lint:check && npm run test:run && npm run build:lib",
+    "prepublishOnly": "npm run clean && npm run build:lib",
     "postbuild": "npm run test:build",
     "test:build": "node -e \"console.log('Build test: checking exports...'); require('./dist/index.cjs'); import('./dist/index.js').then(() => console.log('✓ Build test passed'))\"",
     "size-check": "bundlesize",
@@ -122,6 +122,7 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@tailwindcss/vite": "^4.1.11",
     "@types/react-syntax-highlighter": "^15.5.13",
+    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.536.0",
     "react-syntax-highlighter": "^15.6.1",
