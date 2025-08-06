@@ -531,7 +531,7 @@ export function mergeConfigurationsWithConflictResolution(
     const sortedConfigs = configs.sort((a, b) => a.priority - b.priority)
 
     // Start with default config
-    let mergedConfig: any = { ...defaultConfig }
+    const mergedConfig: any = { ...defaultConfig }
 
     // Track conflicts during merge
     function mergeWithConflictTracking(

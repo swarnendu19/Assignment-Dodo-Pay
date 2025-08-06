@@ -35,24 +35,28 @@ const variants = [
 ]
 
 export function VariantShowcase() {
+    const handleFileSelect = (files: File[]) => {
+        console.log('Files selected:', files)
+    }
+
     return (
-        <section className="bg-card rounded-lg border p-6">
-            <h2 className="text-2xl font-semibold text-foreground mb-6">
+        <section className="bg-white rounded-lg border shadow-sm p-6">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-6">
                 All Variants
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {variants.map((variant) => (
                     <div key={variant.variant} className="space-y-3">
                         <div>
-                            <h3 className="text-lg font-medium text-foreground">
+                            <h3 className="text-lg font-medium text-gray-900">
                                 {variant.name}
                             </h3>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-sm text-gray-600">
                                 {variant.description}
                             </p>
                         </div>
-                        <div className="bg-muted/30 rounded-lg p-4 min-h-[120px] flex items-center justify-center">
-                            <FileUpload {...variant.props} />
+                        <div className="bg-gray-50 rounded-lg p-4 min-h-[120px] flex items-center justify-center">
+                            <FileUpload {...variant.props} onFileSelect={handleFileSelect} />
                         </div>
                     </div>
                 ))}
